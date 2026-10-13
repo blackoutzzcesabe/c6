@@ -1,24 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const C6YellowApp());
 }
 
-// Controller global simples para gerenciar o estado do saldo e visibilidade
+// Controller global para gerenciar saldo e persistência com SharedPreferences
 class AppDataModel extends ChangeNotifier {
   bool _isBalanceVisible = false;
-  double _accountBalance = 1542.87;
+  double _accountBalance = 8.27;
 
   bool get isBalanceVisible => _isBalanceVisible;
   double get accountBalance => _accountBalance;
 
-  void toggleBalanceVisibility() {
-    _isBalanceVisible = !_isBalanceVisible;
+  AppDataModel() {
+    _loadBalance();
+  }
+
+  Future<void> _loadBalance() async {
+    final prefs = await SharedPreferences.getInstance();
+    _accountBalance = prefs.getDouble('saved_balance') ?? 8.27;
     notifyListeners();
   }
 
-  void updateBalance(double newBalance) {
+  Future<void> updateBalance(double newBalance) async {
     _accountBalance = newBalance;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('saved_balance', newBalance);
+    notifyListeners();
+  }
+
+  void toggleBalanceVisibility() {
+    _isBalanceVisible = !_isBalanceVisible;
     notifyListeners();
   }
 }
@@ -107,7 +120,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 }
 
 // ==========================================
-// TELA 1: INÍCIO
+// TELA 1: INÍCIO (Com Dicas C6Yellow Fiéis)
 // ==========================================
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -141,6 +154,7 @@ class HomeScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
+              // Conta Corrente Card
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -151,10 +165,39 @@ class HomeScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: const [
-                        Text('🇧🇷', style: TextStyle(fontSize: 16)),
-                        SizedBox(width: 8),
-                        Text('Conta corrente', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                      children: [
+                        // Logo personalizada da bandeira do Brasil sem emoji
+                        Container(
+                          width: 20,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.yellow,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              Container(
+                                width: 4,
+                                height: 4,
+                                decoration: const BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Conta corrente', style: TextStyle(color: Colors.grey, fontSize: 14)),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -176,6 +219,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+              // Ações Rápidas Topo
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
@@ -186,6 +230,7 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
+              // Bloco Pix
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -257,6 +302,29 @@ class HomeScreen extends StatelessWidget {
                         padding: EdgeInsets.only(top: 16.0),
                         child: Text('Minhas chaves', style: TextStyle(color: Color(0xFF3EA6FF), fontWeight: FontWeight.bold)),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Seção Dicas @C6Yellow
+              const Text('Dicas @C6Yellow', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 340,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: const [
+                    _TipCard(
+                      bannerColor: Colors.cyan,
+                      title: 'Cartões @C6Yellow',
+                      description: 'O cartão do C6 Yellow é um cartão de débito e pode ser usado em compras à vista em lojas físicas e on-line.',
+                    ),
+                    SizedBox(width: 16),
+                    _TipCard(
+                      bannerColor: Colors.amber,
+                      title: 'Cartões @C6Yellow',
+                      description: 'É uma forma de pagamento segura e prática. Você não precisa andar com dinheiro para fazer suas compras.',
                     ),
                   ],
                 ),
@@ -367,7 +435,7 @@ class CardsScreen extends StatelessWidget {
 }
 
 // ==========================================
-// TELA 3: INVESTIR (Com Menu Secreto de Edição)
+// TELA 3: INVESTIR (Com Menu Secreto Corrigido)
 // ==========================================
 class InvestScreen extends StatelessWidget {
   const InvestScreen({super.key});
@@ -423,11 +491,12 @@ class InvestScreen extends StatelessWidget {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFEE140)),
                   onPressed: () {
-                    final newBalance = double.tryParse(controller.text.replaceAll(',', '.')) ?? appData.accountBalance;
+                    final cleanText = controller.text.replaceAll(',', '.');
+                    final newBalance = double.tryParse(cleanText) ?? appData.accountBalance;
                     appData.updateBalance(newBalance);
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Saldo atualizado com sucesso!')),
+                      const SnackBar(content: Text('Saldo atualizado e salvo com sucesso!')),
                     );
                   },
                   child: const Text('Salvar Novo Saldo', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
@@ -520,7 +589,7 @@ class InvestScreen extends StatelessWidget {
 }
 
 // ==========================================
-// TELA 4: EXTRATO (Agora atualiza dinamicamente)
+// TELA 4: EXTRATO
 // ==========================================
 class StatementScreen extends StatelessWidget {
   const StatementScreen({super.key});
@@ -549,10 +618,38 @@ class StatementScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: const [
-                        Text('🇧🇷', style: TextStyle(fontSize: 16)),
-                        SizedBox(width: 8),
-                        Text('Conta corrente', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.yellow,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              Container(
+                                width: 4,
+                                height: 4,
+                                decoration: const BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Conta corrente', style: TextStyle(color: Colors.grey, fontSize: 14)),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -643,6 +740,84 @@ class _PixSubAction extends StatelessWidget {
         const SizedBox(height: 4),
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
+    );
+  }
+}
+
+class _TipCard extends StatelessWidget {
+  final Color bannerColor;
+  final String title;
+  final String description;
+
+  const _TipCard({
+    required this.bannerColor,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 280,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 140,
+            decoration: BoxDecoration(
+              color: bannerColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFEE140),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'C6',
+                          style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: const [
+                    Icon(Icons.upload, size: 16, color: Color(0xFF3EA6FF)),
+                    SizedBox(width: 4),
+                    Text('Compartilhar', style: TextStyle(color: Color(0xFF3EA6FF), fontWeight: FontWeight.bold, fontSize: 12)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
